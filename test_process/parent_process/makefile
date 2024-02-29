@@ -7,7 +7,7 @@ CXX_INCLUDES = -I/usr/include -I/usr/local/include
 
 CXX_LIB_DIR = -L/usr/local/lib -L/lib/x86_64-linux-gnu -L/usr/lib/x86_64-linux-gnu
 
-LIBS := -lpthread
+LIBS := -lpthread -lrt
 
 SUBDIRS := $(wildcard */) $(wildcard */*/) $(wildcard */*/*/) $(wildcard */*/*/*/) $(wildcard */*/*/*/*/)
 

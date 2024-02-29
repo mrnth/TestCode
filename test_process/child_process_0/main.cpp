@@ -4,6 +4,12 @@
 #include <iostream>
 #include <atomic>
 #include <unistd.h>
+#include <mqueue.h>
+#include <cstring>
+
+#define QUEUE_NAME "/my_queue"
+#define MAX_MSG_SIZE 1024
+#define MAX_MSG_COUNT 10
 
 using namespace std;
 using namespace chrono;
@@ -35,10 +41,38 @@ int main(int argc, char **argv)
 	sigaction(SIGTERM, &sigIntHandler, NULL);
 	sigaction(SIGKILL, &sigIntHandler, NULL);
 
+	// Tạo message queue attributes
+	struct mq_attr attr;
+	attr.mq_flags = O_NONBLOCK;
+	attr.mq_maxmsg = MAX_MSG_COUNT;
+	attr.mq_msgsize = MAX_MSG_SIZE;
+	attr.mq_curmsgs = 0;
+
+	mqd_t mq;
+
+	// Mở hoặc tạo message queue
+	mq = mq_open(QUEUE_NAME, O_CREAT | O_RDWR, 0666, &attr);
+	if (mq == -1)
+	{
+		std::cerr << "Error opening message queue\n";
+		return 1;
+	}
+
+	char buffer[MAX_MSG_SIZE];
+	memset(buffer, 0, sizeof(buffer));
+
 	while (program_running == true)
 	{
+		// Nhận thông điệp từ message queue
+		mq_receive(mq, buffer, MAX_MSG_SIZE, NULL);
+
 		std::cout << "Child process 0, PID: " << getpid() << std::endl;
+		std::cout << buffer << std::endl;
 		sleep(3);
 	}
+
+	mq_close(mq);
+	mq_unlink(QUEUE_NAME);
+
 	return 0;
 }
