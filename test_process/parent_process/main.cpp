@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <vector>
+#include <string>
+#include <mqueue.h>
 
 using namespace std;
 
@@ -38,8 +40,9 @@ int main(int argc, char **argv)
 	vector<pid_t> mListPid(2);
 	for (int proc_i = 0; proc_i < num_proc; ++proc_i)
 	{
-		std::cout << "Parent process create child process" << proc_i << std::endl;
 		mListPid[proc_i] = fork();
+		std::cout << "-------------------------------" << std::endl;
+		std::cout << getpid() << " Parent process create child process " << proc_i << std::endl;
 		if (mListPid[proc_i] == 0)
 		{
 			// Child process
@@ -47,13 +50,15 @@ int main(int argc, char **argv)
 			{
 			case 0:
 			{
-				char *argv_list[] = {"input0", NULL};
+				// std::cout << "row 50. pid = " << getpid() << ". proc = " << proc_i << std::endl;		
+				char *argv_list[] = {NULL};
 				execv("../child_process_0/child_process.elf", argv_list);
 				break;
 			}
 			case 1:
 			{
-				char *argv_list[] = {"input1", NULL};
+				// std::cout << "row 57. pid = " << getpid() << ". proc = " << proc_i << std::endl;
+				char *argv_list[] = {NULL};
 				execv("../child_process_1/child_process.elf", argv_list);
 				break;
 			}
@@ -69,26 +74,26 @@ int main(int argc, char **argv)
 		}
 		else
 		{
+			// std::cout << "row 74. pid = " << getpid() << ". proc = " << proc_i << std::endl;
 			num_children++; // Increment the count of child processes created
 		}
 	}
-	sleep(10);
+	sleep(3);
 
 	while (num_children > 0)
 	{
 		std::cout << "-------------------------------" << std::endl;
-		for (size_t i = 0; i < mListPid.size(); i++)
-		{
-			if (mListPid[i] > 0)
-			{
-				if (kill(mListPid[i], SIGQUIT) != 0)
-				{
-					std::cout << "Success. Parent proc send signal to proc " << mListPid[i] << std::endl;
-					std::cout << "num_child = " << num_children << std::endl;
-				}
-			}
-			sleep(1);
-		}
+		// for (unsigned int i = 0; i < mListPid.size(); i++)
+		// {
+		// 	if (mListPid[i] > 0)
+		// 	{
+				// if (kill(mListPid[i], SIGTERM) == 0)
+				// {
+				// 	std::cout << "Success. Parent proc send signal to proc " << mListPid[i] << std::endl;
+				// 	std::cout << "num_child = " << num_children << std::endl;
+				// }
+		// 	}
+		// }
 		sleep(3);
 	}
 
