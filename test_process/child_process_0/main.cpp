@@ -13,7 +13,10 @@ volatile std::atomic<bool> program_running;
 void signalHandler(int signal)
 {
 	std::cout << "Child process 0, PID: " << getpid() << ", signal: " << signal << std::endl;
-	program_running = false;	
+	if (signal == SIGINT) // Ctrl-C
+	{
+		program_running = false;
+	}
 }
 
 int main(int argc, char **argv)

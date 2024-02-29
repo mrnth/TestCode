@@ -6,26 +6,30 @@
 using namespace std;
 
 int num_children = 0;
+struct sigaction sigIntHandler;
 
-void sigchld_handler(int signum)
+void signalHandler(int signal)
 {
 	// Reap all terminated child processes
 	while (waitpid(-1, nullptr, WNOHANG) > 0)
 		num_children--;
+
 }
 
 int main(int argc, char **argv)
 {
-	// Set up signal handler for SIGCHLD
-	struct sigaction sa;
-	sa.sa_handler = sigchld_handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
-	if (sigaction(SIGCHLD, &sa, nullptr) == -1)
-	{
-		std::cout << "Failed to set up signal handler" << std::endl;
-		return 1;
-	}
+	sigIntHandler.sa_handler = signalHandler;
+	sigfillset(&sigIntHandler.sa_mask);
+	sigIntHandler.sa_flags = 0;
+
+	sigaction(SIGINT, &sigIntHandler, NULL);
+	sigaction(SIGSEGV, &sigIntHandler, NULL);
+	sigaction(SIGILL, &sigIntHandler, NULL);
+	sigaction(SIGFPE, &sigIntHandler, NULL);
+	sigaction(SIGABRT, &sigIntHandler, NULL);
+	sigaction(SIGFPE, &sigIntHandler, NULL);
+	sigaction(SIGTERM, &sigIntHandler, NULL);
+	sigaction(SIGKILL, &sigIntHandler, NULL);
 
 	std::cout << "Parent process, PID: " << getpid() << std::endl;
 
@@ -77,7 +81,7 @@ int main(int argc, char **argv)
 		{
 			if (mListPid[i] > 0)
 			{
-				if (kill(mListPid[i], SIGTERM) != 0)
+				if (kill(mListPid[i], SIGQUIT) != 0)
 				{
 					std::cout << "Success. Parent proc send signal to proc " << mListPid[i] << std::endl;
 					std::cout << "num_child = " << num_children << std::endl;
