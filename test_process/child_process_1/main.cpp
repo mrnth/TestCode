@@ -13,10 +13,7 @@ volatile std::atomic<bool> program_running;
 void signalHandler(int signal)
 {
 	std::cout << "Child process 1, PID: " << getpid() << ", signal: " << signal << std::endl;
-	if (signal == SIGINT) // Ctrl-C
-	{
-		program_running = false;
-	}
+	program_running = false;
 }
 
 int main(int argc, char **argv)
@@ -27,7 +24,7 @@ int main(int argc, char **argv)
 	sigIntHandler.sa_flags = 0;
 
 	sigaction(SIGINT, &sigIntHandler, NULL);
-	sigaction(SIGSEGV, &sigIntHandler, NULL);
+	// sigaction(SIGSEGV, &sigIntHandler, NULL);
 	sigaction(SIGILL, &sigIntHandler, NULL);
 	sigaction(SIGFPE, &sigIntHandler, NULL);
 	sigaction(SIGABRT, &sigIntHandler, NULL);
@@ -37,8 +34,8 @@ int main(int argc, char **argv)
 
 	while (program_running == true)
 	{
-		std::cout << "Child process 1, PID: " << getpid() << std::endl;
-		sleep(3);
+		std::cout << "----------------Child process 1, PID: " << getpid() << std::endl;
+		sleep(5);
 	}
 	return 0;
 }

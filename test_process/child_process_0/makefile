@@ -3,11 +3,11 @@ APP=child_process.elf
 
 CXX_FLAGS = -std=c++14 -fopenmp -Wall -O3 -fpermissive
 
-CXX_INCLUDES = -I/usr/include -I/usr/local/include
+CXX_INCLUDES = -I/usr/include -I/usr/local/include -I../include
 
 CXX_LIB_DIR = -L/usr/local/lib -L/lib/x86_64-linux-gnu -L/usr/lib/x86_64-linux-gnu
 
-LIBS := -lpthread -lrt
+LIBS := -lpthread -lrt -lboost_system
 
 SUBDIRS := $(wildcard */) $(wildcard */*/) $(wildcard */*/*/) $(wildcard */*/*/*/) $(wildcard */*/*/*/*/)
 
