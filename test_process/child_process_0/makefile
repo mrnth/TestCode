@@ -1,5 +1,5 @@
 CC=/usr/bin/c++
-APP=child_process.elf
+APP=child_process.exe
 
 CXX_FLAGS = -std=c++14 -fopenmp -Wall -O3 -fpermissive
 
@@ -45,4 +45,4 @@ ${APP}: $(OBJS)
 clean:
 	find . -name '*.o' -delete
 	find . -name '*.d' -delete
-	rm -f *.elf
+	rm -f *.exe

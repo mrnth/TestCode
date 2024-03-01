@@ -57,13 +57,13 @@ int main(int argc, char **argv)
 			case 0:
 			{
 				char *argv_list[] = {NULL};
-				execv("../child_process_0/child_process.elf", argv_list);
+				execv("../child_process_0/child_process.exe", argv_list);
 				break;
 			}
 			case 1:
 			{
 				char *argv_list[] = {NULL};
-				execv("../child_process_1/child_process.elf", argv_list);
+				execv("../child_process_1/child_process.exe", argv_list);
 				break;
 			}
 			default:
