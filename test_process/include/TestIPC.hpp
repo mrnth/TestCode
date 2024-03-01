@@ -1,53 +1,23 @@
-#include <iostream>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/interprocess_semaphore.hpp>
+#include <boost/interprocess/sync/named_mutex.hpp>
 #include <memory>
 #include <vector>
 #include <mqueue.h>
-#include <cstring>
 
-namespace TestIPC
+namespace TestIpcShareMem
 {
 	using namespace boost::interprocess;
 	using namespace std;
 
-	class TestSemaphore
+	struct ShareMemData
 	{
-	private:
-		boost::interprocess::interprocess_semaphore mMutex(1);
-
-	public:
-		TestSemaphore();
-		~TestSemaphore();
-
-		void Lock();
-		void UnLock();
+		int int_value;
+		float float_value;
+		char string_value[100];
+		bool is_new = false;
 	};
-
-	TestSemaphore::TestSemaphore()
-	{
-	}
-
-	TestSemaphore::~TestSemaphore()
-	{
-	}
-
-	void TestSemaphore::Lock()
-	{
-		mMutex.wait(); // Chờ semaphore
-	}
-
-	void TestSemaphore::UnLock()
-	{
-		mMutex.post(); // Tăng giá trị của semaphore, giải phóng khóa
-	}
-}
-
-namespace TestIPC
-{
-	using namespace boost::interprocess;
-	using namespace std;
 
 	class TestShareMem
 	{
@@ -55,84 +25,99 @@ namespace TestIPC
 		TestShareMem();
 		~TestShareMem();
 
-		void WriteString();
-		void WriteInt();
-		void WriteVector();
+		void WriteString(std::string &data);
+		void WriteInt(int data);
+		void WriteVector(std::vector<float> &data);
+		void WriteObject(ShareMemData &data);
 
 		void ReadString();
 		void ReadInt();
 		void ReadVector();
+		void ReadObject();
 
 	private:
 		std::unique_ptr<boost::interprocess::mapped_region> mMappedRegion;
-		std::unique_ptr<TestSemaphore> mMutex;
+		std::unique_ptr<named_mutex> mMutex;
+		unsigned int mVectorSize = 10; // Số lượng phần tử trong vector
 	};
 
 	TestShareMem::TestShareMem()
 	{
 		// Tạo hoặc mở một vùng shared memory có tên "shared_memory"
-		shared_memory_object share_mem_obj(open_or_create, "my_test_shared_memory", read_write);
+		shared_memory_object share_mem_obj(open_or_create, "globally_unique_shared_memory_name", read_write);
 
-		// Thiết lập kích thước của vùng shared memory 1000 bytes
-		share_mem_obj.truncate(1000);
+		// Thiết lập kích thước của vùng shared memory 1000000 bytes
+		share_mem_obj.truncate(1000000);
 
 		// Tạo một vùng dữ liệu được ánh xạ cho shared memory
 		mMappedRegion = make_unique<mapped_region>(share_mem_obj, read_write);
 
-		mMutex = make_unique<TestSemaphore>();
+		// Tạo mutex để đồng bộ hóa truy cập vào shared memory
+		mMutex = std::make_unique<named_mutex>(open_or_create, "globally_unique_mutex_name");
 	}
 
 	TestShareMem::~TestShareMem()
 	{
-		shared_memory_object::remove("my_test_shared_memory");
+		shared_memory_object::remove("globally_unique_shared_memory_name");
+		named_mutex::remove("globally_unique_mutex_name");
 	}
 
-	void TestShareMem::WriteString()
+	void TestShareMem::WriteString(std::string &data)
 	{
 		// Lấy địa chỉ bắt đầu của vùng dữ liệu được ánh xạ
 		void *addr = mMappedRegion->get_address();
 
-		std::string data = "Hello from parent proc";
-
-		mMutex->Lock();
+		mMutex->lock();
 		// Ghi dữ liệu vào vùng dữ liệu được ánh xạ
 		std::strcpy(static_cast<char *>(addr), data.c_str());
-		mMutex->UnLock();
+		mMutex->unlock();
 
-		std::cout << "WriteString Done" << std::endl;
+		// std::cout << "WriteString Done" << std::endl;
 	}
 
-	void TestShareMem::WriteInt()
+	void TestShareMem::WriteInt(int data)
 	{
 		// Lấy địa chỉ bắt đầu của vùng dữ liệu được ánh xạ và chuyển đổi thành con trỏ int*
 		int *int_ptr = static_cast<int *>(mMappedRegion->get_address());
 
-		mMutex->Lock();
+		mMutex->lock();
 		// Gán giá trị số nguyên vào vùng dữ liệu được ánh xạ
-		*int_ptr = 123;
-		mMutex->UnLock();
+		*int_ptr = data;
+		mMutex->unlock();
 
 		std::cout << "WriteInt Done" << std::endl;
 	}
 
-	void TestShareMem::WriteVector()
+	void TestShareMem::WriteVector(std::vector<float> &data)
 	{
+		if (data.size() != mVectorSize)
+		{
+			std::cout << "vector size must be 10";
+			return;
+		}
+
 		// Lấy địa chỉ bắt đầu của vùng dữ liệu được ánh xạ và chuyển đổi thành con trỏ char*
 		char *addr = static_cast<char *>(mMappedRegion->get_address());
 
-		// Tạo vector dữ liệu mẫu
-		std::vector<float> data;
-		for (int i = 0; i < 10; i++)
-		{
-			data.push_back((float)i);
-		}
-
-		mMutex->Lock();
+		mMutex->lock();
 		// Sao chép dữ liệu từ vector vào vùng dữ liệu được ánh xạ
 		std::memcpy(addr, data.data(), sizeof(float) * data.size());
-		mMutex->UnLock();
+		mMutex->unlock();
 
 		std::cout << "WriteVector Done" << std::endl;
+	}
+
+	void TestShareMem::WriteObject(ShareMemData &data)
+	{
+		// Lấy địa chỉ bắt đầu của vùng dữ liệu được ánh xạ và chuyển đổi thành con trỏ ShareMemData*
+		ShareMemData *shared_data = static_cast<ShareMemData *>(mMappedRegion->get_address());
+
+		mMutex->lock();
+		// Sao chép dữ liệu từ ShareMemData vào vùng dữ liệu được ánh xạ
+		std::memcpy(shared_data, &data, sizeof(ShareMemData));
+		mMutex->unlock();
+
+		// std::cout << "WriteObject Done" << std::endl;
 	}
 
 	void TestShareMem::ReadString()
@@ -140,9 +125,9 @@ namespace TestIPC
 		// Lấy địa chỉ bắt đầu của vùng dữ liệu được ánh xạ
 		void *addr = mMappedRegion->get_address();
 
-		mMutex->Lock();
+		mMutex->lock();
 		std::string data = static_cast<char *>(addr);
-		mMutex->UnLock();
+		mMutex->unlock();
 
 		// In dữ liệu được đọc từ shared memory
 		std::cout << "Value read from shared memory: " << data << std::endl;
@@ -153,9 +138,9 @@ namespace TestIPC
 		// Lấy địa chỉ bắt đầu của vùng dữ liệu được ánh xạ và chuyển đổi thành con trỏ int*
 		int *int_ptr = static_cast<int *>(mMappedRegion->get_address());
 
-		mMutex->Lock();
+		mMutex->lock();
 		int data = *int_ptr;
-		mMutex->UnLock();
+		mMutex->unlock();
 
 		// Đọc giá trị số nguyên từ vùng dữ liệu được ánh xạ và in ra màn hình
 		std::cout << "Value read from shared memory: " << data << std::endl;
@@ -166,13 +151,10 @@ namespace TestIPC
 		// Lấy địa chỉ bắt đầu của vùng dữ liệu được ánh xạ và chuyển đổi thành con trỏ float*
 		float *float_ptr = static_cast<float *>(mMappedRegion->get_address());
 
-		// Số lượng phần tử trong vector
-		int size = 10; // Giả sử số lượng phần tử là 10 (đã biết trước)
-
-		mMutex->Lock();
+		mMutex->lock();
 		// Đọc dữ liệu từ vùng dữ liệu được ánh xạ và lưu vào vector
-		std::vector<float> data(float_ptr, float_ptr + size);
-		mMutex->UnLock();
+		std::vector<float> data(float_ptr, float_ptr + mVectorSize);
+		mMutex->unlock();
 
 		// In dữ liệu từ vector ra màn hình
 		std::cout << "Data read from shared memory:" << std::endl;
@@ -182,11 +164,32 @@ namespace TestIPC
 		}
 		std::cout << std::endl;
 	}
+
+	void TestShareMem::ReadObject()
+	{
+		// Lấy địa chỉ bắt đầu của vùng dữ liệu được ánh xạ và chuyển đổi thành con trỏ char*
+		ShareMemData *shared_data = static_cast<ShareMemData *>(mMappedRegion->get_address());
+
+		mMutex->lock();
+		// Copy dữ liệu từ vùng dữ liệu được ánh xạ vào biến data, sau đó set is_new = false
+		ShareMemData data = *shared_data;
+		shared_data->is_new = false;
+		mMutex->unlock();
+
+		if (data.is_new == true)
+		{
+			std::cout << "--------------Data read from shared memory:" << std::endl;
+			std::cout << data.float_value << std::endl;
+			std::cout << data.int_value << std::endl;
+			std::cout << data.string_value << std::endl;
+		}
+		else
+			std::cout << "--------------Data is not be changed" << std::endl;
+	}
 }
 
-namespace TestIPC
+namespace TestIpcMsgQueue
 {
-	using namespace boost::interprocess;
 	using namespace std;
 
 	// Định nghĩa cấu trúc cho Msg Queue

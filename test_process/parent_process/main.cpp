@@ -6,7 +6,8 @@
 
 #include "TestIPC.hpp"
 
-using namespace TestIPC;
+using namespace TestIpcShareMem;
+using namespace TestIpcMsgQueue;
 
 int num_children = 0;
 struct sigaction sigIntHandler;
@@ -83,14 +84,14 @@ int main(int argc, char **argv)
 	// int num_msg = 0;
 	while (num_children > 0)
 	{
-		// mTestShareMem->WriteInt();
-		// mTestShareMem->WriteString();
-		mTestShareMem->WriteVector();
+		// mTestShareMem->ReadInt();
+		// mTestShareMem->ReadString();
+		// mTestShareMem->ReadVector();
+		mTestShareMem->ReadObject();
 
-		// mTestMsgQueue->SendMsg();
-		// mTestMsgQueue->GetQueueInfo();
+		// mTestMsgQueue->ReceiveMsg();
 
-		sleep(1);
+		usleep(450000);
 	}
 
 	return 0;

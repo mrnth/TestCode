@@ -8,7 +8,8 @@
 
 using namespace std;
 using namespace chrono;
-using namespace TestIPC;
+using namespace TestIpcShareMem;
+using namespace TestIpcMsgQueue;
 
 struct sigaction sigIntHandler;
 volatile std::atomic<bool> program_running;
@@ -38,14 +39,27 @@ int main(int argc, char **argv)
 
 	while (program_running == true)
 	{
-		std::cout << "--------------Child process 0, PID: " << getpid() << std::endl;
+		// std::cout << "--------------Child process 0, PID: " << getpid() << std::endl;
 
-		// mTestShareMem->ReadInt();
-		// mTestShareMem->ReadString();
-		mTestShareMem->ReadVector();
+		// mTestShareMem->WriteInt(10);
 
-		// mTestMsgQueue->ReceiveMsg();
-		sleep(3);
+		// std::string test_string = "Hi sharemem from proc 0";
+		// mTestShareMem->WriteString(test_string);
+
+		// std::vector<float> test_vector = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+		// mTestShareMem->WriteVector(test_vector);
+
+		ShareMemData test_obj;
+		test_obj.float_value = 1.2;
+		test_obj.int_value = 3;
+		test_obj.is_new = true;
+		strcpy(test_obj.string_value, "Hello share mem obj from proc 0");
+		mTestShareMem->WriteObject(test_obj);
+
+		// mTestMsgQueue->SendMsg();
+		// mTestMsgQueue->GetQueueInfo();
+
+		usleep(1000000);
 	}
 
 	return 0;
